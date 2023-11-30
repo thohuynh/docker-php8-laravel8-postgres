@@ -1,0 +1,84 @@
+version: '3'
+
+networks:
+  carbonix:
+    driver: 'bridge'
+
+services:
+  app:
+    build:
+      context: docker/app
+    ports:
+      - ${APP_PORT}:80
+    volumes:
+      - ${APP_PATH}:/var/www/html
+      - ./docker/app/logs/nginx:/var/log/nginx
+      - ./docker/app/.composer:/root/.composer
+      - ./docker/app/resolv.conf:/etc/resolv.conf
+    depends_on:
+      - postgres
+    networks:
+      carbonix:
+        aliases:
+          - api.carbonix.localhost
+          - api-docs.carbonix.localhost
+
+#  app_php_81:
+#    build:
+#      context: docker/app_php_81
+#    ports:
+#      - ${APP_PHP_81_PORT}:80
+#    volumes:
+#      - ${APP_PATH}:/var/www/html
+#      - ./docker/app_php_81/logs/nginx:/var/log/nginx
+#      - ./docker/app_php_81/.composer:/root/.composer
+#      - ./docker/app_php_81/resolv.conf:/etc/resolv.conf
+#    depends_on:
+#      - postgreslabel
+#    networks:
+#      carbonix:
+#        aliases:
+#          - api.carbonix.localhost
+#          - api-docs.carbonix.localhost
+
+  postgres:
+    build:
+      context: docker/postgres
+    environment:
+      - POSTGRES_USER=carbonix
+      - POSTGRES_PASSWORD=carbonix
+      - POSTGRES_DB=carbonix
+    volumes:
+      - ./docker/postgres/data:/var/lib/postgresql/data
+    ports:
+      - ${POSTGRES_PORT}:5432
+    networks:
+      - carbonix
+
+
+  redis:
+    image: redis:6.2-alpine
+    command: redis-server --requirepass secret
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./docker/redis/data:/var/lib/redis
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - carbonix
+
+#  localstack:
+#    image: localstack/localstack:latest
+#    environment:
+#      - SERVICES=s3
+#      - DEFAULT_REGION=us-west-2
+#      - DATA_DIR=/tmp/localstack/data
+#    ports:
+#      - ${LOCALSTACK_PORT}:4566
+#    volumes:
+#      - ./docker/localstack/data:/tmp/localstack
+#      - ./docker/localstack/docker-entrypoint-initaws.d:/docker-entrypoint-initaws.d
+#    networks:
+#      carbonix:
+#        aliases:
+#          - carbonix.localhost
